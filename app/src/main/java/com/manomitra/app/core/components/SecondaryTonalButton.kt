@@ -19,6 +19,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.ui.graphics.Shape
+
 /*
  * SecondaryTonalButton Component
  *
@@ -31,7 +33,8 @@ import androidx.compose.ui.unit.dp
 fun SecondaryTonalButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    shape: Shape = MaterialTheme.shapes.medium
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -45,7 +48,7 @@ fun SecondaryTonalButton(
                 scaleX = scale
                 scaleY = scale
             }
-            .clip(MaterialTheme.shapes.medium) // rounded-xl (12.dp)
+            .clip(shape)
             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)) // bg-primary/5
             .clickable(
                 interactionSource = interactionSource,

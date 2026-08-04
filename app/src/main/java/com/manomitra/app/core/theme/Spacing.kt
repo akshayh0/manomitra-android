@@ -23,6 +23,7 @@ data class Spacing(
 
     // Branding and component dimensions
     val logoSize: Dp = 128.dp,
+    val avatarSize: Dp = 256.dp,
     val progressWidth: Dp = 128.dp,
     val progressHeight: Dp = 4.dp,
     val footerBottomPadding: Dp = 48.dp,

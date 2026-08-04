@@ -29,6 +29,8 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import com.manomitra.app.core.theme.spacing
 
+import androidx.compose.ui.graphics.Shape
+
 /*
  * PrimaryGradientButton Component
  *
@@ -43,7 +45,8 @@ fun PrimaryGradientButton(
     text: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    showArrow: Boolean = true
+    showArrow: Boolean = true,
+    shape: Shape = MaterialTheme.shapes.medium
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -62,7 +65,7 @@ fun PrimaryGradientButton(
                 scaleX = scale
                 scaleY = scale
             }
-            .clip(MaterialTheme.shapes.medium) // rounded-xl (12.dp)
+            .clip(shape)
             .background(brush = gradient)
             .clickable(
                 interactionSource = interactionSource,

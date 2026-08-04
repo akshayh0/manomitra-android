@@ -29,6 +29,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 
+import androidx.compose.ui.unit.Dp
+
 /*
  * IllustrationCard Component
  *
@@ -43,7 +45,8 @@ import androidx.compose.ui.unit.dp
 fun IllustrationCard(
     painter: Painter,
     contentDescription: String?,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    cornerRadius: Dp = 24.dp
 ) {
     var startScale by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -82,17 +85,17 @@ fun IllustrationCard(
                         top = 0f,
                         right = size.width,
                         bottom = size.height,
-                        rx = 24.dp.toPx(),
-                        ry = 24.dp.toPx(),
+                        radiusX = cornerRadius.toPx(),
+                        radiusY = cornerRadius.toPx(),
                         paint = paint
                     )
                 }
             }
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(cornerRadius))
             .border(
                 width = 1.dp,
                 color = Color.White.copy(alpha = 0.4f),
-                shape = RoundedCornerShape(24.dp)
+                shape = RoundedCornerShape(cornerRadius)
             )
             .background(Color.White.copy(alpha = 0.8f))
     ) {

@@ -6,11 +6,11 @@
         import androidx.navigation.compose.NavHost
         import androidx.navigation.compose.composable
         import androidx.navigation.compose.rememberNavController
-        import com.manomitra.app.feature.auth.login.LoginScreen
-        import com.manomitra.app.feature.auth.register.RegisterScreen
-        import com.manomitra.app.feature.home.HomeScreen
         import com.manomitra.app.feature.splash.SplashScreen
+        import androidx.compose.ui.text.style.TextAlign
         import com.manomitra.app.feature.onboarding.OnboardingWelcomeScreen
+        import com.manomitra.app.feature.onboarding.OnboardingInsightsScreen
+        import com.manomitra.app.feature.onboarding.OnboardingAIScreen
         import androidx.compose.foundation.clickable
         import androidx.compose.foundation.layout.fillMaxSize
         import androidx.compose.foundation.layout.Box
@@ -63,30 +63,34 @@
                     )
                 }
 
-                // Onboarding Insights (Placeholder)
+                // Onboarding Insights
                 composable(route = Screen.OnboardingInsights.route) {
-                    Box(
-                        modifier = Modifier.fillMaxSize().clickable {
+                    OnboardingInsightsScreen(
+                        onContinueClick = {
                             navController.navigate(Screen.OnboardingAI.route)
                         },
-                        contentAlignment = androidx.compose.ui.Alignment.Center
-                    ) {
-                        Text(text = "Onboarding Insights Screen (Placeholder)\nTap anywhere to continue")
-                    }
+                        onSkipClick = {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.OnboardingWelcome.route) { inclusive = true }
+                            }
+                        }
+                    )
                 }
 
-                // Onboarding AI (Placeholder)
+                // Onboarding AI
                 composable(route = Screen.OnboardingAI.route) {
-                    Box(
-                        modifier = Modifier.fillMaxSize().clickable {
+                    OnboardingAIScreen(
+                        onGetStartedClick = {
                             navController.navigate(Screen.Login.route) {
                                 popUpTo(Screen.OnboardingWelcome.route) { inclusive = true }
                             }
                         },
-                        contentAlignment = androidx.compose.ui.Alignment.Center
-                    ) {
-                        Text(text = "Onboarding AI Screen (Placeholder)\nTap anywhere to complete onboarding")
-                    }
+                        onSkipClick = {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.OnboardingWelcome.route) { inclusive = true }
+                            }
+                        }
+                    )
                 }
 
                 // Login Destination
@@ -116,5 +120,49 @@
                 composable(route = Screen.Home.route) {
                     HomeScreen()
                 }
+            }
+        }
+
+        @Composable
+        private fun LoginScreen(
+            onLoginSuccess: () -> Unit,
+            onRegisterClick: () -> Unit
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize().clickable { onLoginSuccess() },
+                contentAlignment = androidx.compose.ui.Alignment.Center
+            ) {
+                Text(
+                    text = "Login Screen (Coming Soon)\nTap to Log In",
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+
+        @Composable
+        private fun RegisterScreen(
+            onBackClick: () -> Unit
+        ) {
+            Box(
+                modifier = Modifier.fillMaxSize().clickable { onBackClick() },
+                contentAlignment = androidx.compose.ui.Alignment.Center
+            ) {
+                Text(
+                    text = "Register Screen (Coming Soon)\nTap to go back",
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+
+        @Composable
+        private fun HomeScreen() {
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = androidx.compose.ui.Alignment.Center
+            ) {
+                Text(
+                    text = "Home Screen (Coming Soon)",
+                    textAlign = TextAlign.Center
+                )
             }
         }
