@@ -10,6 +10,11 @@
         import com.manomitra.app.feature.auth.register.RegisterScreen
         import com.manomitra.app.feature.home.HomeScreen
         import com.manomitra.app.feature.splash.SplashScreen
+        import com.manomitra.app.feature.onboarding.OnboardingWelcomeScreen
+        import androidx.compose.foundation.clickable
+        import androidx.compose.foundation.layout.fillMaxSize
+        import androidx.compose.foundation.layout.Box
+        import androidx.compose.material3.Text
 
         /*
         * AppNavHost
@@ -32,11 +37,56 @@
                 composable(route = Screen.Splash.route) {
                     SplashScreen(
                         onNavigateToLogin = {
-                            navController.navigate(Screen.Login.route) {
+                            navController.navigate(Screen.OnboardingWelcome.route) {
                                 popUpTo(Screen.Splash.route) { inclusive = true }
                             }
                         }
                     )
+                }
+
+                // Onboarding Welcome
+                composable(route = Screen.OnboardingWelcome.route) {
+                    OnboardingWelcomeScreen(
+                        onContinueClick = {
+                            navController.navigate(Screen.OnboardingInsights.route)
+                        },
+                        onSkipClick = {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.OnboardingWelcome.route) { inclusive = true }
+                            }
+                        },
+                        onSignInClick = {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.OnboardingWelcome.route) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+
+                // Onboarding Insights (Placeholder)
+                composable(route = Screen.OnboardingInsights.route) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().clickable {
+                            navController.navigate(Screen.OnboardingAI.route)
+                        },
+                        contentAlignment = androidx.compose.ui.Alignment.Center
+                    ) {
+                        Text(text = "Onboarding Insights Screen (Placeholder)\nTap anywhere to continue")
+                    }
+                }
+
+                // Onboarding AI (Placeholder)
+                composable(route = Screen.OnboardingAI.route) {
+                    Box(
+                        modifier = Modifier.fillMaxSize().clickable {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.OnboardingWelcome.route) { inclusive = true }
+                            }
+                        },
+                        contentAlignment = androidx.compose.ui.Alignment.Center
+                    ) {
+                        Text(text = "Onboarding AI Screen (Placeholder)\nTap anywhere to complete onboarding")
+                    }
                 }
 
                 // Login Destination

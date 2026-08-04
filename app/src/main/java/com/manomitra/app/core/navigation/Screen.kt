@@ -14,6 +14,11 @@ sealed class Screen(val route: String) {
     object Login : Screen("login")
     object Register : Screen("register")
 
+    // Onboarding screens
+    object OnboardingWelcome : Screen("onboarding_welcome")
+    object OnboardingInsights : Screen("onboarding_insights")
+    object OnboardingAI : Screen("onboarding_ai")
+
     // Primary application dashboard and feature areas
     object Home : Screen("home")
     object Chat : Screen("chat")

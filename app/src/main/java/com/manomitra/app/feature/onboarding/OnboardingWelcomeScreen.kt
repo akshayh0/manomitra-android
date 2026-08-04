@@ -1,6 +1,7 @@
 package com.manomitra.app.feature.onboarding
 
 import androidx.compose.animation.core.EaseInOutSine
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -17,11 +18,14 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.sizeIn
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -40,6 +44,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import com.manomitra.app.R
 import com.manomitra.app.core.components.IllustrationCard
 import com.manomitra.app.core.components.PageIndicatorDots
@@ -69,81 +75,78 @@ fun OnboardingWelcomeScreen(
     val spacing = MaterialTheme.spacing
     val scrollState = rememberScrollState()
 
-    // Parallax animation values for the background blur aura
+    // Circular angle parallax floating motion for background aura
     val infiniteTransition = rememberInfiniteTransition(label = "auraParallax")
-    val auraOffsetX by infiniteTransition.animateFloat(
-        initialValue = -12f,
-        targetValue = 12f,
+    val angle by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * Math.PI).toFloat(),
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3500, easing = EaseInOutSine),
-            repeatMode = RepeatMode.Reverse
+            animation = tween(durationMillis = 10000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
         ),
-        label = "auraOffsetX"
+        label = "auraAngle"
     )
-    val auraOffsetY by infiniteTransition.animateFloat(
-        initialValue = -12f,
-        targetValue = 12f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 4000, easing = EaseInOutSine),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "auraOffsetY"
-    )
+    val auraOffsetX = kotlin.math.sin(angle) * 10f
+    val auraOffsetY = kotlin.math.cos(angle) * 10f
 
     Box(
         modifier = modifier
             .fillMaxSize()
             .drawBehind {
-                // Dynamic top-right radial gradient matching onboarding specifications
+                // Dynamic top-right radial gradient matching onboarding specifications exactly (0% to 50% stop)
                 drawRect(
                     brush = Brush.radialGradient(
-                        colors = listOf(Color(0xFFE2DFFF), MaterialTheme.colorScheme.background),
+                        0.0f to Color(0xFFE2DFFF),
+                        0.5f to MaterialTheme.colorScheme.background,
+                        1.0f to MaterialTheme.colorScheme.background,
                         center = Offset(size.width, 0f),
                         radius = size.width * 1.2f
                     )
                 )
             }
     ) {
-        // Main Content (Scrollable Column)
+        // Pinned Header Row
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .align(Alignment.TopCenter)
+                .statusBarsPadding()
+                .padding(horizontal = spacing.containerMarginMobile, vertical = spacing.gutter),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Manomitra",
+                style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
+                color = MaterialTheme.colorScheme.primary
+            )
+            
+            // Flat Skip Button with minimum 48dp touch target
+            Box(
+                modifier = Modifier
+                    .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
+                    .clickable(onClick = onSkipClick),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Skip",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
+        // Scrollable Content Column (Centered vertically and horizontally)
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(horizontal = spacing.containerMarginMobile)
-                .padding(bottom = 240.dp), // Clear the fixed bottom footer height
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(top = 96.dp) // Pinned header height + padding offset
+                .padding(bottom = 230.dp), // Pinned footer height + padding offset
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            // Header Row
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = spacing.gutter),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Manomitra",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold),
-                    color = MaterialTheme.colorScheme.primary
-                )
-                
-                // Flat Skip Button with minimum 48dp touch target
-                Box(
-                    modifier = Modifier
-                        .sizeIn(minWidth = 48.dp, minHeight = 48.dp)
-                        .clickable(onClick = onSkipClick),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Skip",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(spacing.stackLg))
-
             // Illustration Frame Box
             Box(
                 modifier = Modifier
@@ -151,18 +154,15 @@ fun OnboardingWelcomeScreen(
                     .aspectRatio(1f),
                 contentAlignment = Alignment.Center
             ) {
-                // Animated blurred aura circle in background
+                // Animated blurred aura circle in background (matching blur-3xl)
                 Box(
                     modifier = Modifier
                         .fillMaxSize(1.2f)
                         .offset(x = auraOffsetX.dp, y = auraOffsetY.dp)
+                        .blur(64.dp)
                         .background(
-                            brush = Brush.radialGradient(
-                                colors = listOf(
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
-                                    Color.Transparent
-                                )
-                            )
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
+                            shape = CircleShape
                         )
                 )
 
@@ -184,21 +184,25 @@ fun OnboardingWelcomeScreen(
             ) {
                 Text(
                     text = "Welcome to Manomitra.",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.SemiBold),
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = (-0.025).em // -2.5% tighter letter spacing tracking-tight
+                    ),
                     color = MaterialTheme.colorScheme.onBackground,
                     textAlign = TextAlign.Center
                 )
                 Text(
                     text = "A safe space to talk, reflect, and grow with AI-powered support.",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                    textAlign = TextAlign.Center,
-                    lineHeight = MaterialTheme.typography.bodyLarge.lineHeight * 1.15
+                    style = MaterialTheme.typography.bodyLarge.copy(
+                        lineHeight = 26.sp // leading-relaxed (1.625x of 16sp font)
+                    ),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
                 )
             }
         }
 
-        // Fixed Glassmorphic Bottom Action Area
+        // Fixed Glassmorphic Bottom Action Area (Pinned)
         Box(
             modifier = Modifier
                 .align(Alignment.BottomCenter)
@@ -214,6 +218,7 @@ fun OnboardingWelcomeScreen(
                 }
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(Color.White.copy(alpha = 0.8f))
+                .navigationBarsPadding()
         ) {
             // Glassmorphism Blur background layer
             Box(
