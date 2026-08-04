@@ -7,10 +7,18 @@
         import androidx.navigation.compose.composable
         import androidx.navigation.compose.rememberNavController
         import com.manomitra.app.feature.splash.SplashScreen
-        import androidx.compose.ui.text.style.TextAlign
+        import com.manomitra.app.feature.auth.login.LoginScreen
+        import com.manomitra.app.feature.auth.register.RegisterScreen
+        import com.manomitra.app.feature.home.HomeScreen
+        import com.manomitra.app.feature.chat.ChatScreen
+        import com.manomitra.app.feature.voice.VoiceCompanionScreen
         import com.manomitra.app.feature.onboarding.OnboardingWelcomeScreen
         import com.manomitra.app.feature.onboarding.OnboardingInsightsScreen
         import com.manomitra.app.feature.onboarding.OnboardingAIScreen
+        import com.manomitra.app.feature.journal.JournalScreen
+        import com.manomitra.app.feature.mood.MoodScreen
+        import com.manomitra.app.feature.profile.ProfileScreen
+        import com.manomitra.app.feature.settings.SettingsScreen
         import androidx.compose.foundation.clickable
         import androidx.compose.foundation.layout.fillMaxSize
         import androidx.compose.foundation.layout.Box
@@ -112,57 +120,74 @@
                     RegisterScreen(
                         onBackClick = {
                             navController.popBackStack()
+                        },
+                        onRegisterSuccess = {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.Login.route) { inclusive = true }
+                            }
                         }
                     )
                 }
 
                 // Home Destination
                 composable(route = Screen.Home.route) {
-                    HomeScreen()
+                    HomeScreen(
+                        onChatClick = { navController.navigate(Screen.Chat.route) },
+                        onVoiceClick = { navController.navigate(Screen.VoiceCompanion.route) },
+                        onJournalClick = { navController.navigate(Screen.Journal.route) },
+                        onMoodClick = { navController.navigate(Screen.Mood.route) },
+                        onProfileClick = { navController.navigate(Screen.Profile.route) },
+                        onSettingsClick = { navController.navigate(Screen.Settings.route) }
+                    )
+                }
+
+                // Placeholder Destinations
+                composable(route = Screen.Chat.route) {
+                    ChatScreen(onBackClick = { navController.popBackStack() })
+                }
+
+                composable(route = Screen.VoiceCompanion.route) {
+                    VoiceCompanionScreen(onBackClick = { navController.popBackStack() })
+                }
+
+                composable(route = Screen.Mood.route) {
+                    MoodScreen(
+                        onBackClick = { navController.popBackStack() },
+                        onHomeTabClick = { navController.navigate(Screen.Home.route) },
+                        onCompanionTabClick = { navController.navigate(Screen.VoiceCompanion.route) },
+                        onJournalTabClick = { navController.navigate(Screen.Journal.route) },
+                        onProfileTabClick = { navController.navigate(Screen.Profile.route) }
+                    )
+                }
+
+                composable(route = Screen.Journal.route) {
+                    JournalScreen(
+                        onBackClick = { navController.popBackStack() },
+                        onHomeTabClick = { navController.navigate(Screen.Home.route) },
+                        onCompanionTabClick = { navController.navigate(Screen.VoiceCompanion.route) },
+                        onProfileTabClick = { navController.navigate(Screen.Profile.route) }
+                    )
+                }
+
+                composable(route = Screen.Profile.route) {
+                    ProfileScreen(
+                        onBackClick = { navController.popBackStack() },
+                        onSettingsClick = { navController.navigate(Screen.Settings.route) },
+                        onHomeTabClick = { navController.navigate(Screen.Home.route) },
+                        onCompanionTabClick = { navController.navigate(Screen.VoiceCompanion.route) },
+                        onJournalTabClick = { navController.navigate(Screen.Journal.route) },
+                        onLogoutClick = {
+                            navController.navigate(Screen.Login.route) {
+                                popUpTo(Screen.Home.route) { inclusive = true }
+                            }
+                        }
+                    )
+                }
+
+                composable(route = Screen.Settings.route) {
+                    SettingsScreen(onBackClick = { navController.popBackStack() })
                 }
             }
         }
 
-        @Composable
-        private fun LoginScreen(
-            onLoginSuccess: () -> Unit,
-            onRegisterClick: () -> Unit
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize().clickable { onLoginSuccess() },
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                Text(
-                    text = "Login Screen (Coming Soon)\nTap to Log In",
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
 
-        @Composable
-        private fun RegisterScreen(
-            onBackClick: () -> Unit
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize().clickable { onBackClick() },
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                Text(
-                    text = "Register Screen (Coming Soon)\nTap to go back",
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-
-        @Composable
-        private fun HomeScreen() {
-            Box(
-                modifier = Modifier.fillMaxSize(),
-                contentAlignment = androidx.compose.ui.Alignment.Center
-            ) {
-                Text(
-                    text = "Home Screen (Coming Soon)",
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
