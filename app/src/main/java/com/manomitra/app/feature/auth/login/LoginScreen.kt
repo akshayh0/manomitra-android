@@ -40,6 +40,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.manomitra.app.R
+import com.manomitra.app.auth.AuthState
+import com.manomitra.app.auth.AuthViewModel
 import com.manomitra.app.core.components.PrimaryGradientButton
 import com.manomitra.app.core.theme.spacing
 
@@ -54,10 +56,19 @@ import com.manomitra.app.core.theme.spacing
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
     onRegisterClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val spacing = MaterialTheme.spacing
     val scrollState = rememberScrollState()
+
+    val authState by viewModel.authState.collectAsState()
+
+    LaunchedEffect(authState) {
+        if (authState is AuthState.Authenticated) {
+            onLoginSuccess()
+        }
+    }
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -208,7 +219,10 @@ fun LoginScreen(
                                     }
                                     BasicTextField(
                                         value = email,
-                                        onValueChange = { email = it },
+                                        onValueChange = { 
+                                            email = it
+                                            viewModel.clearError()
+                                        },
                                         singleLine = true,
                                         textStyle = MaterialTheme.typography.bodyLarge.copy(
                                             color = MaterialTheme.colorScheme.onSurface
@@ -280,7 +294,10 @@ fun LoginScreen(
                                     }
                                     BasicTextField(
                                         value = password,
-                                        onValueChange = { password = it },
+                                        onValueChange = { 
+                                            password = it
+                                            viewModel.clearError()
+                                        },
                                         singleLine = true,
                                         visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                         textStyle = MaterialTheme.typography.bodyLarge.copy(
@@ -291,7 +308,11 @@ fun LoginScreen(
                                             imeAction = ImeAction.Done
                                         ),
                                         keyboardActions = KeyboardActions(
-                                            onDone = { onLoginSuccess() }
+                                            onDone = { 
+                                                if (email.isNotEmpty() && password.isNotEmpty()) {
+                                                    viewModel.signIn(email, password)
+                                                }
+                                            }
                                         ),
                                         cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                         modifier = Modifier
@@ -314,16 +335,44 @@ fun LoginScreen(
                             }
                         }
 
+                        // Error message display
+                        if (authState is AuthState.Error) {
+                            Text(
+                                text = (authState as AuthState.Error).message,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 4.dp),
+                                textAlign = TextAlign.Center
+                            )
+                        }
+
                         // Sign In Action Button
-                        PrimaryGradientButton(
-                            text = "Sign In",
-                            onClick = onLoginSuccess,
-                            showArrow = false,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp)
-                        )
+                        val isLoading = authState is AuthState.Loading
+                        Box(
+                            modifier = Modifier.fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            PrimaryGradientButton(
+                                text = if (isLoading) "" else "Sign In",
+                                onClick = {
+                                    if (!isLoading && email.isNotEmpty() && password.isNotEmpty()) {
+                                        viewModel.signIn(email, password)
+                                    }
+                                },
+                                showArrow = false,
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                            }
+                        }
 
                         // Divider Row
                         Row(
@@ -351,7 +400,12 @@ fun LoginScreen(
 
                         // Google Sign In Action Button
                         Surface(
-                            onClick = onLoginSuccess,
+                            onClick = {
+                                if (!isLoading) {
+                                    // Trigger signIn with empty/stub credentials to check configuration runtime message
+                                    viewModel.signIn("google@manomitra.com", "googlePassword")
+                                }
+                            },
                             shape = RoundedCornerShape(8.dp),
                             border = BorderStroke(
                                 width = 1.dp,

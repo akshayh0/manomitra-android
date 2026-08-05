@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "318037559361",
+    "project_id": "manomitra-cdaa6",
+    "storage_bucket": "manomitra-cdaa6.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:318037559361:android:bf7befc92b287bedce9ec0",
+        "android_client_info": {
+          "package_name": "com.manomitra.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjx7jETlZmwYE6HMfu4fRe3qWQ6B3X_7U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

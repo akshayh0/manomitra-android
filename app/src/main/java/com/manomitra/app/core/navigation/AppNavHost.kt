@@ -19,6 +19,8 @@
         import com.manomitra.app.feature.mood.MoodTrackerScreen
         import com.manomitra.app.feature.profile.ProfileScreen
         import com.manomitra.app.feature.settings.SettingsScreen
+        import com.manomitra.app.auth.AuthState
+        import com.manomitra.app.auth.AuthViewModel
         import androidx.compose.foundation.clickable
         import androidx.compose.foundation.layout.fillMaxSize
         import androidx.compose.foundation.layout.Box
@@ -34,7 +36,8 @@
         @Composable
         fun AppNavHost(
             modifier: Modifier = Modifier,
-            navController: NavHostController = rememberNavController()
+            navController: NavHostController = rememberNavController(),
+            authViewModel: AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
         ) {
             NavHost(
                 navController = navController,
@@ -45,7 +48,12 @@
                 composable(route = Screen.Splash.route) {
                     SplashScreen(
                         onNavigateToLogin = {
-                            navController.navigate(Screen.OnboardingWelcome.route) {
+                            val destination = if (authViewModel.authState.value is AuthState.Authenticated) {
+                                Screen.Home.route
+                            } else {
+                                Screen.OnboardingWelcome.route
+                            }
+                            navController.navigate(destination) {
                                 popUpTo(Screen.Splash.route) { inclusive = true }
                             }
                         }
@@ -104,6 +112,7 @@
                 // Login Destination
                 composable(route = Screen.Login.route) {
                     LoginScreen(
+                        viewModel = authViewModel,
                         onLoginSuccess = {
                             navController.navigate(Screen.Home.route) {
                                 popUpTo(Screen.Login.route) { inclusive = true }
@@ -118,11 +127,12 @@
                 // Register Destination
                 composable(route = Screen.Register.route) {
                     RegisterScreen(
+                        viewModel = authViewModel,
                         onBackClick = {
                             navController.popBackStack()
                         },
                         onRegisterSuccess = {
-                            navController.navigate(Screen.Login.route) {
+                            navController.navigate(Screen.Home.route) {
                                 popUpTo(Screen.Login.route) { inclusive = true }
                             }
                         }
@@ -177,6 +187,7 @@
                         onCompanionTabClick = { navController.navigate(Screen.VoiceCompanion.route) },
                         onJournalTabClick = { navController.navigate(Screen.Journal.route) },
                         onLogoutClick = {
+                            authViewModel.signOut()
                             navController.navigate(Screen.Login.route) {
                                 popUpTo(Screen.Home.route) { inclusive = true }
                             }

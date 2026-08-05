@@ -41,6 +41,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.manomitra.app.R
+import com.manomitra.app.auth.AuthState
+import com.manomitra.app.auth.AuthViewModel
 import com.manomitra.app.core.components.PrimaryGradientButton
 import com.manomitra.app.core.theme.spacing
 
@@ -55,10 +57,19 @@ import com.manomitra.app.core.theme.spacing
 fun RegisterScreen(
     onRegisterSuccess: () -> Unit,
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val spacing = MaterialTheme.spacing
     val scrollState = rememberScrollState()
+
+    val authState by viewModel.authState.collectAsState()
+
+    LaunchedEffect(authState) {
+        if (authState is AuthState.Authenticated) {
+            onRegisterSuccess()
+        }
+    }
 
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -266,9 +277,12 @@ fun RegisterScreen(
                                         )
                                     }
                                     BasicTextField(
-                                        value = name,
-                                        onValueChange = { name = it },
-                                        singleLine = true,
+                                         value = name,
+                                         onValueChange = { 
+                                             name = it
+                                             viewModel.clearError()
+                                         },
+                                         singleLine = true,
                                         textStyle = MaterialTheme.typography.bodyLarge.copy(
                                             color = MaterialTheme.colorScheme.onSurface
                                         ),
@@ -338,9 +352,12 @@ fun RegisterScreen(
                                         )
                                     }
                                     BasicTextField(
-                                        value = email,
-                                        onValueChange = { email = it },
-                                        singleLine = true,
+                                         value = email,
+                                         onValueChange = { 
+                                             email = it
+                                             viewModel.clearError()
+                                         },
+                                         singleLine = true,
                                         textStyle = MaterialTheme.typography.bodyLarge.copy(
                                             color = MaterialTheme.colorScheme.onSurface
                                         ),
@@ -410,9 +427,12 @@ fun RegisterScreen(
                                         )
                                     }
                                     BasicTextField(
-                                        value = password,
-                                        onValueChange = { password = it },
-                                        singleLine = true,
+                                         value = password,
+                                         onValueChange = { 
+                                             password = it
+                                             viewModel.clearError()
+                                         },
+                                         singleLine = true,
                                         visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                         textStyle = MaterialTheme.typography.bodyLarge.copy(
                                             color = MaterialTheme.colorScheme.onSurface
@@ -495,9 +515,12 @@ fun RegisterScreen(
                                         )
                                     }
                                     BasicTextField(
-                                        value = confirmPassword,
-                                        onValueChange = { confirmPassword = it },
-                                        singleLine = true,
+                                         value = confirmPassword,
+                                         onValueChange = { 
+                                             confirmPassword = it
+                                             viewModel.clearError()
+                                         },
+                                         singleLine = true,
                                         visualTransformation = if (isConfirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                                         textStyle = MaterialTheme.typography.bodyLarge.copy(
                                             color = MaterialTheme.colorScheme.onSurface
@@ -506,13 +529,13 @@ fun RegisterScreen(
                                             keyboardType = KeyboardType.Password,
                                             imeAction = ImeAction.Done
                                         ),
-                                        keyboardActions = KeyboardActions(
-                                            onDone = {
-                                                if (validateForm()) {
-                                                    onRegisterSuccess()
-                                                }
-                                            }
-                                        ),
+                                         keyboardActions = KeyboardActions(
+                                             onDone = {
+                                                 if (validateForm()) {
+                                                     viewModel.signUp(email, password, name)
+                                                 }
+                                             }
+                                         ),
                                         cursorBrush = SolidColor(if (hasConfirmPasswordError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary),
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -542,20 +565,44 @@ fun RegisterScreen(
                             }
                         }
 
+                        // Error message display
+                        if (authState is AuthState.Error) {
+                             Text(
+                                 text = (authState as AuthState.Error).message,
+                                 color = MaterialTheme.colorScheme.error,
+                                 style = MaterialTheme.typography.bodyMedium,
+                                 modifier = Modifier
+                                     .fillMaxWidth()
+                                     .padding(vertical = 4.dp),
+                                 textAlign = TextAlign.Center
+                             )
+                        }
+
                         // Create Account Action Button
-                        PrimaryGradientButton(
-                            text = "Create Account",
-                            onClick = {
-                                if (validateForm()) {
-                                    onRegisterSuccess()
-                                }
-                            },
-                            showArrow = false,
-                            shape = RoundedCornerShape(8.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(top = 8.dp)
-                        )
+                        val isLoading = authState is AuthState.Loading
+                        Box(
+                             modifier = Modifier.fillMaxWidth(),
+                             contentAlignment = Alignment.Center
+                         ) {
+                             PrimaryGradientButton(
+                                 text = if (isLoading) "" else "Create Account",
+                                 onClick = {
+                                     if (!isLoading && validateForm()) {
+                                         viewModel.signUp(email, password, name)
+                                     }
+                                 },
+                                 showArrow = false,
+                                 shape = RoundedCornerShape(8.dp),
+                                 modifier = Modifier.fillMaxWidth()
+                             )
+                             if (isLoading) {
+                                 CircularProgressIndicator(
+                                     modifier = Modifier.size(24.dp),
+                                     color = Color.White,
+                                     strokeWidth = 2.dp
+                                 )
+                             }
+                        }
 
                         // Divider Row
                         Row(
@@ -582,18 +629,23 @@ fun RegisterScreen(
                         }
 
                         // Google Sign In Action Button
-                        Surface(
-                            onClick = onRegisterSuccess,
-                            shape = RoundedCornerShape(8.dp),
-                            border = BorderStroke(
-                                width = 1.dp,
-                                color = MaterialTheme.colorScheme.outlineVariant
-                            ),
-                            color = MaterialTheme.colorScheme.surface,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(56.dp)
-                        ) {
+                         Surface(
+                             onClick = {
+                                 if (!isLoading) {
+                                     // Trigger registration flow with stub credentials to show configuration error
+                                     viewModel.signUp("google@manomitra.com", "googlePassword", "Google User")
+                                 }
+                             },
+                             shape = RoundedCornerShape(8.dp),
+                             border = BorderStroke(
+                                 width = 1.dp,
+                                 color = MaterialTheme.colorScheme.outlineVariant
+                             ),
+                             color = MaterialTheme.colorScheme.surface,
+                             modifier = Modifier
+                                 .fillMaxWidth()
+                                 .height(56.dp)
+                         ) {
                             Row(
                                 horizontalArrangement = Arrangement.Center,
                                 verticalAlignment = Alignment.CenterVertically,
