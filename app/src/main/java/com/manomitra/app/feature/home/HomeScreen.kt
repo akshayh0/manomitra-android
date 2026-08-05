@@ -36,6 +36,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.manomitra.app.R
+import com.manomitra.app.core.components.BottomTab
+import com.manomitra.app.core.components.ManomitraBottomNavigation
 import com.manomitra.app.core.theme.spacing
 
 /**
@@ -742,107 +744,13 @@ fun HomeScreen(
         }
 
         // Bottom Navigation Bar
-        Surface(
-            color = Color.White.copy(alpha = 0.92f),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(80.dp)
-                .align(Alignment.BottomCenter)
-                .border(1.dp, Color(0xFFF1F5F9))
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Home Nav Item (Active)
-                Column(
-                    modifier = Modifier.clickable { },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Home,
-                        contentDescription = "Home",
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Text(
-                        text = "Home",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary
-                        ),
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-
-                // Companion Nav Item
-                Column(
-                    modifier = Modifier.clickable { onChatClick() },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_smart_toy),
-                        contentDescription = "Companion",
-                        tint = Color(0xFF94A3B8),
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Text(
-                        text = "Companion",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF94A3B8)
-                        ),
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-
-                // Journal Nav Item
-                Column(
-                    modifier = Modifier.clickable { onJournalClick() },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_edit_note),
-                        contentDescription = "Journal",
-                        tint = Color(0xFF94A3B8),
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Text(
-                        text = "Journal",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF94A3B8)
-                        ),
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-
-                // Profile Nav Item
-                Column(
-                    modifier = Modifier.clickable { onProfileClick() },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Profile",
-                        tint = Color(0xFF94A3B8),
-                        modifier = Modifier.size(28.dp)
-                    )
-                    Text(
-                        text = "Profile",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color(0xFF94A3B8)
-                        ),
-                        modifier = Modifier.padding(top = 4.dp)
-                    )
-                }
-            }
-        }
+        ManomitraBottomNavigation(
+            currentTab = BottomTab.HOME,
+            onHomeClick = { },
+            onCompanionClick = onChatClick,
+            onJournalClick = onJournalClick,
+            onProfileClick = onProfileClick,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }

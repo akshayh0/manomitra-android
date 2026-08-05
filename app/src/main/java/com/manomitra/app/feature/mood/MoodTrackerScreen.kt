@@ -31,15 +31,17 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.manomitra.app.R
+import com.manomitra.app.core.components.BottomTab
+import com.manomitra.app.core.components.ManomitraBottomNavigation
 import com.manomitra.app.core.theme.spacing
 
 /**
- * MoodScreen
+ * MoodTrackerScreen
  *
  * Implements the "Refined Mood Tracker Dashboard" screen matching the Stitch design.
  */
 @Composable
-fun MoodScreen(
+fun MoodTrackerScreen(
     onBackClick: () -> Unit,
     onHomeTabClick: () -> Unit,
     onCompanionTabClick: () -> Unit,
@@ -756,80 +758,13 @@ fun MoodScreen(
         }
 
         // Bottom Navigation Bar
-        Surface(
-            color = Color.White.copy(alpha = 0.9f),
-            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(72.dp)
-                .align(Alignment.BottomCenter)
-                .border(1.dp, Color(0xFFECEEF0), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-        ) {
-            Row(
-                modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceAround,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                // Home Tab
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .clickable { onHomeTabClick() }
-                        .padding(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Home,
-                        contentDescription = "Home",
-                        tint = Color(0xFF777587)
-                    )
-                    Text(text = "Home", style = MaterialTheme.typography.labelSmall, color = Color(0xFF777587))
-                }
-
-                // Companion Tab
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .clickable { onCompanionTabClick() }
-                        .padding(8.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_smart_toy),
-                        contentDescription = "Companion",
-                        tint = Color(0xFF777587)
-                    )
-                    Text(text = "Companion", style = MaterialTheme.typography.labelSmall, color = Color(0xFF777587))
-                }
-
-                // Journal Tab
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .clickable { onJournalTabClick() }
-                        .padding(8.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_edit_note),
-                        contentDescription = "Journal",
-                        tint = Color(0xFF777587)
-                    )
-                    Text(text = "Journal", style = MaterialTheme.typography.labelSmall, color = Color(0xFF777587))
-                }
-
-                // Profile Tab
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .clickable { onProfileTabClick() }
-                        .padding(8.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = "Profile",
-                        tint = Color(0xFF777587)
-                    )
-                    Text(text = "Profile", style = MaterialTheme.typography.labelSmall, color = Color(0xFF777587))
-                }
-            }
-        }
+        ManomitraBottomNavigation(
+            currentTab = null,
+            onHomeClick = onHomeTabClick,
+            onCompanionClick = onCompanionTabClick,
+            onJournalClick = onJournalTabClick,
+            onProfileClick = onProfileTabClick,
+            modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 }

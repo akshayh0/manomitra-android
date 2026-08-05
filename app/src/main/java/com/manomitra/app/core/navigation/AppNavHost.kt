@@ -16,7 +16,7 @@
         import com.manomitra.app.feature.onboarding.OnboardingInsightsScreen
         import com.manomitra.app.feature.onboarding.OnboardingAIScreen
         import com.manomitra.app.feature.journal.JournalScreen
-        import com.manomitra.app.feature.mood.MoodScreen
+        import com.manomitra.app.feature.mood.MoodTrackerScreen
         import com.manomitra.app.feature.profile.ProfileScreen
         import com.manomitra.app.feature.settings.SettingsScreen
         import androidx.compose.foundation.clickable
@@ -151,7 +151,7 @@
                 }
 
                 composable(route = Screen.Mood.route) {
-                    MoodScreen(
+                    MoodTrackerScreen(
                         onBackClick = { navController.popBackStack() },
                         onHomeTabClick = { navController.navigate(Screen.Home.route) },
                         onCompanionTabClick = { navController.navigate(Screen.VoiceCompanion.route) },
