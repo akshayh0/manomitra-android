@@ -11,6 +11,7 @@
         import com.manomitra.app.feature.auth.register.RegisterScreen
         import com.manomitra.app.feature.home.HomeScreen
         import com.manomitra.app.feature.chat.ChatScreen
+        import com.manomitra.app.feature.chat.ChatViewModel
         import com.manomitra.app.feature.voice.VoiceCompanionScreen
         import com.manomitra.app.feature.onboarding.OnboardingWelcomeScreen
         import com.manomitra.app.feature.onboarding.OnboardingInsightsScreen
@@ -37,7 +38,8 @@
         fun AppNavHost(
             modifier: Modifier = Modifier,
             navController: NavHostController = rememberNavController(),
-            authViewModel: AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+            authViewModel: AuthViewModel = androidx.lifecycle.viewmodel.compose.viewModel(),
+            chatViewModel: ChatViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
         ) {
             NavHost(
                 navController = navController,
@@ -153,7 +155,10 @@
 
                 // Placeholder Destinations
                 composable(route = Screen.Chat.route) {
-                    ChatScreen(onBackClick = { navController.popBackStack() })
+                    ChatScreen(
+                        viewModel = chatViewModel,
+                        onBackClick = { navController.popBackStack() }
+                    )
                 }
 
                 composable(route = Screen.VoiceCompanion.route) {

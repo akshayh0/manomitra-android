@@ -70,42 +70,20 @@ data class Message(
 @Composable
 fun ChatScreen(
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: ChatViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val spacing = MaterialTheme.spacing
-    val coroutineScope = rememberCoroutineScope()
     val listState = rememberLazyListState()
 
     var textInput by remember { mutableStateOf("") }
-    val messages = remember { mutableStateListOf<Message>() }
-    var isTyping by remember { mutableStateOf(false) }
-
-    // Sample initial helper responses
-    val mockResponses = listOf(
-        "I hear you. Work pressure can really take a toll. Have you tried taking a quick breathing break today?",
-        "I'm here for you. It's completely okay to feel overwhelmed. Let's explore some calming exercises together.",
-        "Take a slow breath. You don't have to navigate all of this alone. Tell me more, or we can try a quick reflection.",
-        "Thank you for sharing that with me. Your feelings are valid. What do you think would help you feel most supported right now?"
-    )
-
-    fun getCurrentTime(): String {
-        return SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
-    }
+    val messages = viewModel.messages
+    val isTyping = viewModel.isTyping
 
     fun sendMessage(text: String) {
         if (text.trim().isEmpty()) return
-        messages.add(Message(text = text, isUser = true, timestamp = getCurrentTime()))
+        viewModel.sendMessage(text)
         textInput = ""
-
-        // Trigger AI response with a mock delay and typing indicator
-        coroutineScope.launch {
-            delay(800)
-            isTyping = true
-            delay(1500)
-            isTyping = false
-            val randomReply = mockResponses.random()
-            messages.add(Message(text = randomReply, isUser = false, timestamp = getCurrentTime()))
-        }
     }
 
     // Auto-scroll to bottom when new messages arrive
