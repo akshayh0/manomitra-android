@@ -39,12 +39,24 @@ android {
             )
         }
 
+        // Validate GROQ_API_KEY
+        val groqApiKey = localProperties.getProperty("GROQ_API_KEY")
+        if (groqApiKey.isNullOrEmpty()) {
+            throw org.gradle.api.GradleException(
+                "GROQ_API_KEY is missing from local.properties. Please add 'GROQ_API_KEY=your_api_key' to your local.properties file."
+            )
+        }
+
         buildConfigField("String", "GEMINI_API_KEY", "\"$geminiApiKey\"")
+        buildConfigField("String", "GROQ_API_KEY", "\"$groqApiKey\"")
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            isCrunchPngs = false
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -98,10 +110,21 @@ dependencies {
         exclude(group = "com.google.protobuf", module = "protobuf-java")
     }
     testImplementation(libs.junit)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation("org.json:json:20230227")
+    testImplementation("org.mockito:mockito-core:5.11.0")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
+}
+
+configurations.all {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "io.grpc") {
+            useVersion("1.62.2")
+        }
+    }
 }

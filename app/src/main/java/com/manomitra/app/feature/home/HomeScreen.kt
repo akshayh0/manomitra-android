@@ -16,6 +16,9 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.ui.graphics.asImageBitmap
+import android.graphics.BitmapFactory
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -56,17 +59,43 @@ fun HomeScreen(
     onMoodClick: () -> Unit,
     onProfileClick: () -> Unit,
     onSettingsClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onInsightClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    profileImagePath: String? = null,
+    moodViewModel: com.manomitra.app.feature.mood.MoodViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val spacing = MaterialTheme.spacing
     val scrollState = rememberScrollState()
 
     var selectedMood by remember { mutableStateOf("Calm") }
 
+    val dailyInsight by moodViewModel.dailyInsight.collectAsState()
+    val isInsightLoading by moodViewModel.isInsightLoading.collectAsState()
+    val insightError by moodViewModel.insightError.collectAsState()
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(Unit) {
+        val preferredLanguage = com.manomitra.app.core.voice.VoiceSettings.getSelectedLanguage(context)
+        moodViewModel.loadDailyInsight(preferredLanguage)
+    }
+
+    val currentUser = remember { com.google.firebase.auth.FirebaseAuth.getInstance().currentUser }
+    val displayName = remember { currentUser?.displayName ?: currentUser?.email?.substringBefore("@") ?: "User" }
+
+    val moods = remember {
+        listOf(
+            "Happy" to "😊",
+            "Calm" to "😌",
+            "Neutral" to "😐",
+            "Sad" to "😔",
+            "Stressed" to "😣"
+        )
+    }
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF8FAFC)) // F8FAFC background
+            .background(MaterialTheme.colorScheme.background)
     ) {
         // Scrollable content
         Column(
@@ -90,7 +119,7 @@ fun HomeScreen(
                     )
                 )
                 Text(
-                    text = "Akshay",
+                    text = displayName,
                     style = MaterialTheme.typography.headlineLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary,
@@ -131,13 +160,6 @@ fun HomeScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        val moods = listOf(
-                            "Happy" to "😊",
-                            "Calm" to "😌",
-                            "Neutral" to "😐",
-                            "Sad" to "😔",
-                            "Stressed" to "😣"
-                        )
                         moods.forEach { (moodName, emoji) ->
                             val isSelected = selectedMood == moodName
                             Column(
@@ -145,6 +167,7 @@ fun HomeScreen(
                                     .clip(RoundedCornerShape(16.dp))
                                     .clickable {
                                         selectedMood = moodName
+                                        moodViewModel.saveMood(moodName)
                                         onMoodClick()
                                     }
                                     .background(
@@ -637,8 +660,14 @@ fun HomeScreen(
                     Column(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
+                        val displayText = when {
+                            isInsightLoading -> "Generating your daily wellness insight..."
+                            insightError != null -> "Daily reflection is temporarily unavailable. Check back soon!"
+                            dailyInsight != null -> dailyInsight?.insight ?: ""
+                            else -> "Keep checking in with yourself today. A small moment of reflection can help you notice how you're feeling."
+                        }
                         Text(
-                            text = "\"Taking five deep breaths can lower stress in under a minute.\"",
+                            text = if (isInsightLoading) displayText else "\"$displayText\"",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontStyle = FontStyle.Italic,
                                 fontWeight = FontWeight.Normal,
@@ -649,7 +678,7 @@ fun HomeScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            modifier = Modifier.clickable { onSettingsClick() }
+                            modifier = Modifier.clickable { onInsightClick() }
                         ) {
                             Text(
                                 text = "Read More",
@@ -700,16 +729,41 @@ fun HomeScreen(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.ic_avatar),
-                        contentDescription = "User profile picture",
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape)
-                            .clickable { onProfileClick() },
-                        contentScale = ContentScale.Crop
-                    )
+                    val homeAvatarBitmap = remember(profileImagePath) {
+                        if (!profileImagePath.isNullOrEmpty()) {
+                            try {
+                                BitmapFactory.decodeFile(profileImagePath)?.asImageBitmap()
+                            } catch (e: Exception) {
+                                null
+                            }
+                        } else {
+                            null
+                        }
+                    }
+
+                    if (homeAvatarBitmap != null) {
+                        Image(
+                            bitmap = homeAvatarBitmap,
+                            contentDescription = "User profile picture",
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape)
+                                .clickable { onProfileClick() },
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_avatar),
+                            contentDescription = "User profile picture",
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(CircleShape)
+                                .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape)
+                                .clickable { onProfileClick() },
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                     Box(
                         modifier = Modifier
                             .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f), CircleShape)
@@ -734,8 +788,8 @@ fun HomeScreen(
                         .background(Color(0xFFF1F5F9), CircleShape)
                 ) {
                     Icon(
-                        painter = painterResource(id = R.drawable.ic_notifications),
-                        contentDescription = "Notifications",
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = "Settings",
                         tint = Color(0xFF475569),
                         modifier = Modifier.size(20.dp)
                     )

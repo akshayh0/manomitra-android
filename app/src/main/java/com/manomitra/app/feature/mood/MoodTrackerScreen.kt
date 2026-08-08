@@ -13,9 +13,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,17 +28,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.manomitra.app.R
-import com.manomitra.app.core.components.BottomTab
 import com.manomitra.app.core.components.ManomitraBottomNavigation
 import com.manomitra.app.core.theme.spacing
+import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 /**
  * MoodTrackerScreen
  *
- * Implements the "Refined Mood Tracker Dashboard" screen matching the Stitch design.
+ * Implements the "Refined Mood Tracker Dashboard" screen connected to the MoodViewModel.
  */
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MoodTrackerScreen(
+    viewModel: MoodViewModel,
     onBackClick: () -> Unit,
     onHomeTabClick: () -> Unit,
     onCompanionTabClick: () -> Unit,
@@ -51,7 +54,29 @@ fun MoodTrackerScreen(
 ) {
     val spacing = MaterialTheme.spacing
     val scrollState = rememberScrollState()
-    var isDarkMode by remember { mutableStateOf(false) }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val isDarkMode = when (com.manomitra.app.core.settings.AppSettings.getAppTheme(context).lowercase()) {
+        "dark" -> true
+        "light" -> false
+        else -> androidx.compose.foundation.isSystemInDarkTheme()
+    }
+
+    val currentMood by viewModel.currentMood.collectAsState()
+    val recentMoods by viewModel.recentMoods.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val isAnalyzing by viewModel.isAnalyzing.collectAsState()
+    val error by viewModel.error.collectAsState()
+    val streak by viewModel.streak.collectAsState()
+    val aiAnalysis by viewModel.aiAnalysis.collectAsState()
+
+    val wellnessScore = remember(recentMoods) {
+        val avgScore = if (recentMoods.isNotEmpty()) {
+            recentMoods.map { it.moodScore }.average()
+        } else {
+            3.0
+        }
+        (avgScore * 20).toInt()
+    }
 
     val infiniteTransition = rememberInfiniteTransition(label = "pulseDot")
     val dotScale by infiniteTransition.animateFloat(
@@ -67,7 +92,7 @@ fun MoodTrackerScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(if (isDarkMode) Color(0xFF191C1E) else Color(0xFFF7F9FB)) // Light/Dark mode simulation
+            .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
@@ -117,7 +142,10 @@ fun MoodTrackerScreen(
                 ) {
                     // Dark Mode Toggle
                     IconButton(
-                        onClick = { isDarkMode = !isDarkMode },
+                        onClick = {
+                            val newTheme = if (isDarkMode) "light" else "dark"
+                            com.manomitra.app.core.settings.AppSettings.setAppTheme(context, newTheme)
+                        },
                         modifier = Modifier
                             .size(40.dp)
                             .background(Color(0xFFECEEF0), CircleShape)
@@ -155,6 +183,22 @@ fun MoodTrackerScreen(
                 .padding(horizontal = spacing.containerMarginMobile, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            // Error banner if any
+            error?.let { err ->
+                Surface(
+                    color = MaterialTheme.colorScheme.errorContainer,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = err,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                        modifier = Modifier.padding(16.dp),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+            }
+
             // Wellness Score Hero Card
             Card(
                 colors = CardDefaults.cardColors(
@@ -188,8 +232,9 @@ fun MoodTrackerScreen(
                             verticalAlignment = Alignment.Bottom,
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
+                            // Map average score to wellness metric out of 100
                             Text(
-                                text = "82",
+                                text = "$wellnessScore",
                                 style = MaterialTheme.typography.headlineLarge.copy(
                                     fontWeight = FontWeight.ExtraBold,
                                     color = Color.White,
@@ -206,7 +251,7 @@ fun MoodTrackerScreen(
                         }
 
                         Text(
-                            text = "You're making steady progress.",
+                            text = if (wellnessScore >= 80) "You're making steady progress." else "Keep logging to improve your trends.",
                             style = MaterialTheme.typography.bodyMedium.copy(
                                 color = Color.White.copy(alpha = 0.9f)
                             )
@@ -229,7 +274,36 @@ fun MoodTrackerScreen(
                     )
                 )
 
+                // Current logged mood - click to cycle through moods directly!
+                val currentMoodEmoji = when (currentMood?.mood) {
+                    "VERY_HAPPY" -> "😊"
+                    "HAPPY" -> "😌"
+                    "NEUTRAL" -> "😐"
+                    "SAD" -> "😔"
+                    "VERY_SAD" -> "😣"
+                    else -> "😌"
+                }
+                val currentMoodLabel = when (currentMood?.mood) {
+                    "VERY_HAPPY" -> "Happy"
+                    "HAPPY" -> "Calm"
+                    "NEUTRAL" -> "Neutral"
+                    "SAD" -> "Sad"
+                    "VERY_SAD" -> "Stressed"
+                    else -> "Log Mood"
+                }
+
                 Surface(
+                    onClick = {
+                        val nextMoodName = when (currentMoodLabel) {
+                            "Happy" -> "Calm"
+                            "Calm" -> "Neutral"
+                            "Neutral" -> "Sad"
+                            "Sad" -> "Stressed"
+                            "Stressed" -> "Happy"
+                            else -> "Calm"
+                        }
+                        viewModel.saveMood(nextMoodName)
+                    },
                     shape = CircleShape,
                     color = Color(0xFFECEEF0),
                     border = BorderStroke(1.dp, Color(0xFFC7C4D8).copy(alpha = 0.3f))
@@ -239,9 +313,9 @@ fun MoodTrackerScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text(text = "😊", fontSize = 14.sp)
+                        Text(text = currentMoodEmoji, fontSize = 14.sp)
                         Text(
-                            text = "Calm Today",
+                            text = currentMoodLabel,
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
                         )
                     }
@@ -369,24 +443,65 @@ fun MoodTrackerScreen(
             }
 
             // AI Insights Swipeable Carousel Section
+            var moodSummaryStr = "Tapping 'Analyze' reflects on emotional trends and suggests mindfulness exercises."
+            var noticeablePatternStr = "AI will review logging history to identify stability ranges."
+            var positiveObservationStr = "Positive markers observed based on logged scores will display here."
+            var practicalSuggestionStr = "Actionable mindfulness suggestions will populate upon logging analysis."
+
+            aiAnalysis?.let { jsonStr ->
+                try {
+                    val json = JSONObject(jsonStr)
+                    moodSummaryStr = json.optString("moodSummary", moodSummaryStr)
+                    noticeablePatternStr = json.optString("noticeablePattern", noticeablePatternStr)
+                    positiveObservationStr = json.optString("positiveObservation", positiveObservationStr)
+                    practicalSuggestionStr = json.optString("practicalSuggestion", practicalSuggestionStr)
+                } catch (e: Exception) {
+                    moodSummaryStr = jsonStr
+                }
+            }
+
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_auto_awesome),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Text(
-                        text = "AI Insights",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = if (isDarkMode) Color.White else Color(0xFF191C1E)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_auto_awesome),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
                         )
-                    )
+                        Text(
+                            text = "AI Insights",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDarkMode) Color.White else Color(0xFF191C1E)
+                            )
+                        )
+                    }
+
+                    // Tapping this triggers the AI analyzeMood() call explicitly
+                    Button(
+                        onClick = { viewModel.requestMoodAnalysis() },
+                        enabled = !isAnalyzing && recentMoods.isNotEmpty(),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                        modifier = Modifier.height(32.dp)
+                    ) {
+                        if (isAnalyzing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                strokeWidth = 2.dp,
+                                color = Color.White
+                            )
+                        } else {
+                            Text("Analyze", fontSize = 12.sp)
+                        }
+                    }
                 }
 
                 Row(
@@ -395,7 +510,7 @@ fun MoodTrackerScreen(
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Card 1
+                    // Card 1: Summary
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.secondaryContainer
@@ -410,15 +525,15 @@ fun MoodTrackerScreen(
                                 .padding(20.dp),
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text(text = "✨ Your sleep improved.", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSecondaryContainer)
-                            Text(text = "Consistent 8 hours this week.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f))
+                            Text(text = "✨ Summary", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onSecondaryContainer)
+                            Text(text = moodSummaryStr, fontSize = 12.sp, color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f))
                         }
                     }
 
-                    // Card 2
+                    // Card 2: Noticeable Pattern
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = Color(0xFF006A7C).copy(alpha = 0.1f) // tertiary
+                            containerColor = Color(0xFF006A7C).copy(alpha = 0.1f)
                         ),
                         modifier = Modifier
                             .size(width = 280.dp, height = 136.dp),
@@ -430,12 +545,12 @@ fun MoodTrackerScreen(
                                 .padding(20.dp),
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text(text = "✨ Journaling reduced stress.", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF004E5C))
-                            Text(text = "Evening sessions are working well.", fontSize = 13.sp, color = Color(0xFF004E5C).copy(alpha = 0.8f))
+                            Text(text = "✨ Patterns", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color(0xFF004E5C))
+                            Text(text = noticeablePatternStr, fontSize = 12.sp, color = Color(0xFF004E5C).copy(alpha = 0.8f))
                         }
                     }
 
-                    // Card 3
+                    // Card 3: Suggestion / Positive Observation
                     Card(
                         colors = CardDefaults.cardColors(
                             containerColor = MaterialTheme.colorScheme.primaryContainer
@@ -450,8 +565,8 @@ fun MoodTrackerScreen(
                                 .padding(20.dp),
                             verticalArrangement = Arrangement.Center
                         ) {
-                            Text(text = "✨ Weekend mood is higher.", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
-                            Text(text = "Social activities boosting scores.", fontSize = 13.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
+                            Text(text = "✨ Suggestions", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = MaterialTheme.colorScheme.onPrimaryContainer)
+                            Text(text = practicalSuggestionStr, fontSize = 12.sp, color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f))
                         }
                     }
                 }
@@ -502,37 +617,58 @@ fun MoodTrackerScreen(
                         }
                     }
 
-                    // Calendar days rows (mocking days 1 to 11 for the current month)
-                    val daysColors = listOf(
-                        Color(0xFFEEFBF7), // calm
-                        Color(0xFFE2DFFF), // happy
-                        Color(0xFFECEEF0), // neutral
-                        Color(0xFFFFDAD6), // stressed
-                        Color(0xFFEEFBF7),
-                        Color(0xFFFFDAD6),
-                        Color(0xFFE9DDFF)
-                    )
-                    val textColors = listOf(
-                        Color(0xFF14B8A6), Color(0xFF3525CD), Color(0xFF191C1E),
-                        Color(0xFFBA1A1A), Color(0xFF14B8A6), Color(0xFFBA1A1A), Color(0xFF6B38D4)
-                    )
+                    // Render dynamic calendar cell highlights based on history logs
+                    val calendarData = remember(recentMoods) {
+                        val calendar = java.util.Calendar.getInstance()
+                        val todayDay = calendar.get(java.util.Calendar.DAY_OF_MONTH)
+                        val monthFormat = java.text.SimpleDateFormat("yyyy-MM", java.util.Locale.US)
+                        val activeMonthStr = monthFormat.format(java.util.Date())
+
+                        val mappedDays = (1..11).associateWith { dayNum ->
+                            recentMoods.firstOrNull {
+                                val cal = java.util.Calendar.getInstance().apply { timeInMillis = it.createdAt }
+                                cal.get(java.util.Calendar.DAY_OF_MONTH) == dayNum && monthFormat.format(java.util.Date(it.createdAt)) == activeMonthStr
+                            }
+                        }
+                        Triple(todayDay, activeMonthStr, mappedDays)
+                    }
+                    val todayDay = calendarData.first
+                    val activeMonthStr = calendarData.second
+                    val mappedDays = calendarData.third
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         for (i in 1..7) {
+                            val loggedForDay = mappedDays[i]
+                            
+                            val cellColor = when (loggedForDay?.mood) {
+                                "VERY_HAPPY" -> Color(0xFFE2DFFF)
+                                "HAPPY" -> Color(0xFFEEFBF7)
+                                "NEUTRAL" -> Color(0xFFECEEF0)
+                                "SAD", "VERY_SAD" -> Color(0xFFFFDAD6)
+                                else -> Color(0xFFECEEF0)
+                            }
+                            val cellTextColor = when (loggedForDay?.mood) {
+                                "VERY_HAPPY" -> Color(0xFF3525CD)
+                                "HAPPY" -> Color(0xFF14B8A6)
+                                "NEUTRAL" -> Color(0xFF191C1E)
+                                "SAD", "VERY_SAD" -> Color(0xFFBA1A1A)
+                                else -> Color(0xFF777587)
+                            }
+
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .aspectRatio(1f)
                                     .padding(4.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(daysColors[i - 1]),
+                                    .background(cellColor),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = "$i",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = textColors[i - 1]
+                                    color = cellTextColor
                                 )
                             }
                         }
@@ -540,14 +676,31 @@ fun MoodTrackerScreen(
 
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         for (i in 8..11) {
-                            val isToday = i == 11
+                            val isToday = i == todayDay
+                            val loggedForDay = mappedDays[i]
+                            
+                            val cellColor = when (loggedForDay?.mood) {
+                                "VERY_HAPPY" -> Color(0xFFE2DFFF)
+                                "HAPPY" -> Color(0xFFEEFBF7)
+                                "NEUTRAL" -> Color(0xFFECEEF0)
+                                "SAD", "VERY_SAD" -> Color(0xFFFFDAD6)
+                                else -> if (isToday) Color.White else Color(0xFFECEEF0)
+                            }
+                            val cellTextColor = when (loggedForDay?.mood) {
+                                "VERY_HAPPY" -> Color(0xFF3525CD)
+                                "HAPPY" -> Color(0xFF14B8A6)
+                                "NEUTRAL" -> Color(0xFF191C1E)
+                                "SAD", "VERY_SAD" -> Color(0xFFBA1A1A)
+                                else -> if (isToday) MaterialTheme.colorScheme.primary else Color(0xFF191C1E)
+                            }
+
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .aspectRatio(1f)
                                     .padding(4.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isToday) Color.White else Color(0xFFECEEF0))
+                                    .background(cellColor)
                                     .border(
                                         width = if (isToday) 2.dp else 0.dp,
                                         color = if (isToday) MaterialTheme.colorScheme.primary else Color.Transparent,
@@ -559,11 +712,10 @@ fun MoodTrackerScreen(
                                     text = "$i",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (isToday) MaterialTheme.colorScheme.primary else Color(0xFF191C1E)
+                                    color = cellTextColor
                                 )
                             }
                         }
-                        // Fillers for remaining calendar cells
                         for (i in 12..14) {
                             Spacer(modifier = Modifier.weight(1f))
                         }
@@ -614,7 +766,7 @@ fun MoodTrackerScreen(
                         .fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Item 1
+                    // Item 1: Streak Badge
                     Surface(
                         shape = RoundedCornerShape(20.dp),
                         color = Color.White,
@@ -627,7 +779,7 @@ fun MoodTrackerScreen(
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
                             Text(text = "🏆", fontSize = 28.sp)
-                            Text(text = "7-Day Calm", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(text = "$streak-Day Log", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             Text(text = "Streak", style = MaterialTheme.typography.labelSmall, color = Color(0xFF777587))
                         }
                     }

@@ -1,5 +1,7 @@
 package com.manomitra.app.feature.profile
 
+import android.graphics.BitmapFactory
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -46,7 +48,9 @@ fun ProfileScreen(
     onCompanionTabClick: () -> Unit,
     onJournalTabClick: () -> Unit,
     onLogoutClick: () -> Unit,
-    modifier: Modifier = Modifier
+    onEditProfileClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: ProfileViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val spacing = MaterialTheme.spacing
     val scrollState = rememberScrollState()
@@ -55,10 +59,14 @@ fun ProfileScreen(
     var selectedLanguage by remember { mutableStateOf("English") }
     var appearanceTheme by remember { mutableStateOf("Light") }
 
+    val displayName by viewModel.displayName.collectAsState()
+    val email by viewModel.email.collectAsState()
+    val profileImage by viewModel.profileImage.collectAsState()
+
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF7F9FB)) // f7f9fb base background
+            .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
@@ -104,14 +112,37 @@ fun ProfileScreen(
                         .size(40.dp)
                         .border(2.dp, Color(0xFFC3C0FF), CircleShape)
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.img_profile_large),
-                        contentDescription = "Akshay Profile Photo",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
+                    val topAvatarBitmap = remember(profileImage) {
+                        if (!profileImage.isNullOrEmpty()) {
+                            try {
+                                BitmapFactory.decodeFile(profileImage)?.asImageBitmap()
+                            } catch (e: Exception) {
+                                null
+                            }
+                        } else {
+                            null
+                        }
+                    }
+
+                    if (topAvatarBitmap != null) {
+                        Image(
+                            bitmap = topAvatarBitmap,
+                            contentDescription = "Profile Photo",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = R.drawable.img_profile_large),
+                            contentDescription = "Akshay Profile Photo",
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
             }
         }
@@ -135,17 +166,41 @@ fun ProfileScreen(
                     modifier = Modifier.size(104.dp),
                     contentAlignment = Alignment.BottomEnd
                 ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.img_profile_large),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(96.dp)
-                            .clip(CircleShape)
-                            .border(4.dp, Color.White, CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
+                    val mainAvatarBitmap = remember(profileImage) {
+                        if (!profileImage.isNullOrEmpty()) {
+                            try {
+                                BitmapFactory.decodeFile(profileImage)?.asImageBitmap()
+                            } catch (e: Exception) {
+                                null
+                            }
+                        } else {
+                            null
+                        }
+                    }
+
+                    if (mainAvatarBitmap != null) {
+                        Image(
+                            bitmap = mainAvatarBitmap,
+                            contentDescription = "Profile Photo",
+                            modifier = Modifier
+                                .size(96.dp)
+                                .clip(CircleShape)
+                                .border(4.dp, Color.White, CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Image(
+                            painter = painterResource(id = R.drawable.img_profile_large),
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(96.dp)
+                                .clip(CircleShape)
+                                .border(4.dp, Color.White, CircleShape),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                     IconButton(
-                        onClick = { /* Edit photo */ },
+                        onClick = onEditProfileClick,
                         modifier = Modifier
                             .size(32.dp)
                             .background(MaterialTheme.colorScheme.primary, CircleShape)
@@ -161,21 +216,21 @@ fun ProfileScreen(
                 }
 
                 Text(
-                    text = "Akshay Kumar",
+                    text = displayName,
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF191C1E)
                     )
                 )
                 Text(
-                    text = "akshay.wellness@email.com",
+                    text = email,
                     style = MaterialTheme.typography.bodyMedium.copy(
                         color = Color(0xFF464555)
                     )
                 )
 
                 OutlinedButton(
-                    onClick = { /* Edit details */ },
+                    onClick = onEditProfileClick,
                     shape = CircleShape,
                     border = BorderStroke(1.dp, Color(0xFFC7C4D8)),
                     modifier = Modifier.padding(top = 4.dp)

@@ -38,6 +38,10 @@ import com.manomitra.app.core.theme.spacing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 
 /**
  * VoiceState
@@ -46,9 +50,11 @@ import java.util.Locale
  */
 enum class VoiceState(val label: String, val emoji: String) {
     IDLE("Idle", "💤"),
-    LISTENING("Listening...", "🎤"),
+    LISTENING("Listening...", "🎙"),
+    TRANSCRIBING("Transcribing...", "⚡"),
     THINKING("Thinking...", "🧠"),
-    SPEAKING("Speaking...", "💬")
+    SPEAKING("Speaking...", "💬"),
+    ERROR("Error", "⚠️")
 }
 
 /**
@@ -62,33 +68,69 @@ enum class VoiceState(val label: String, val emoji: String) {
 @Composable
 fun VoiceCompanionScreen(
     onBackClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: VoiceCompanionViewModel = viewModel()
 ) {
     val spacing = MaterialTheme.spacing
-    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
-    var currentState by remember { mutableStateOf(VoiceState.LISTENING) }
-    var isMuted by remember { mutableStateOf(false) }
-    var isSpeakerOn by remember { mutableStateOf(true) }
+    val permission = android.Manifest.permission.RECORD_AUDIO
+    var hasPermission by remember {
+        mutableStateOf(
+            androidx.core.content.ContextCompat.checkSelfPermission(
+                context,
+                permission
+            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        )
+    }
+    var showPermissionDeniedCard by remember { mutableStateOf(false) }
+
+    val recordAudioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            hasPermission = isGranted
+            showPermissionDeniedCard = !isGranted
+        }
+    )
+
+    val currentState = viewModel.currentState
+    val isMuted = viewModel.isMuted
+    val isSpeakerOn = viewModel.isSpeakerOn
+    val userTranscript = viewModel.userTranscript.ifEmpty { "I'm listening. Speak your thoughts..." }
+    val aiTranscript = viewModel.aiTranscript.ifEmpty { "I am your warm and empathetic companion. Ask me anything." }
+
+    val isSessionActive = currentState != VoiceState.IDLE && currentState != VoiceState.ERROR
+    var showExitDialog by remember { mutableStateOf(false) }
+
+    androidx.activity.compose.BackHandler(enabled = isSessionActive) {
+        showExitDialog = true
+    }
+
+    if (showExitDialog) {
+        AlertDialog(
+            onDismissRequest = { showExitDialog = false },
+            title = { Text(text = "End voice session?") },
+            text = { Text(text = "Leaving this screen will terminate your active call session with your companion.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showExitDialog = false
+                        viewModel.shutdown()
+                        onBackClick()
+                    }
+                ) {
+                    Text("End session")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showExitDialog = false }) {
+                    Text("Continue")
+                }
+            }
+        )
+    }
+
     var elapsedSeconds by remember { mutableStateOf(0) }
-
-    var userTranscript by remember { mutableStateOf("I've been feeling stressed about my exams.") }
-    var aiTranscript by remember { mutableStateOf("I'm listening. Tell me more about what's making you feel stressed.") }
-
-    // Mock Conversation Triggers
-    val mockInputs = listOf(
-        "Yeah, I have three finals next week and I feel unprepared.",
-        "I'm trying to study but I keep losing focus and getting anxious.",
-        "I just want to find a way to calm down before tomorrow.",
-        "Do you have any quick exercises that could help me relax?"
-    )
-
-    val mockOutputs = listOf(
-        "I understand. Preparing for exams is tough. Let's try to break down your studying into smaller chunks.",
-        "It's completely natural to lose focus when stressed. Taking a 5-minute breathing break might clear your mind.",
-        "We can definitely work on that. Let's do a simple 4-7-8 breathing exercise together right now.",
-        "Yes! Let's start with a guided mindfulness reflection. Close your eyes and listen to my voice."
-    )
 
     // Running session timer
     LaunchedEffect(true) {
@@ -98,37 +140,17 @@ fun VoiceCompanionScreen(
         }
     }
 
-    // State Machine cycle trigger
-    fun startStateCycle() {
-        coroutineScope.launch {
-            if (currentState == VoiceState.IDLE) {
-                currentState = VoiceState.LISTENING
-            } else if (currentState == VoiceState.LISTENING) {
-                // Emulate Speech-to-Text & Thinking transition
-                currentState = VoiceState.THINKING
-                delay(2000)
-                
-                // Emulate Text-to-Speech transition
-                val randomIndex = mockInputs.indices.random()
-                userTranscript = mockInputs[randomIndex]
-                aiTranscript = mockOutputs[randomIndex]
-                
-                currentState = VoiceState.SPEAKING
-                delay(4000)
-                
-                // Return to listening
-                currentState = VoiceState.LISTENING
-            }
+    LaunchedEffect(hasPermission) {
+        if (hasPermission) {
+            viewModel.startListening(context)
+        } else {
+            recordAudioPermissionLauncher.launch(permission)
         }
     }
 
-    // Auto-cycle for demonstration when screen starts
-    LaunchedEffect(currentState) {
-        if (currentState == VoiceState.LISTENING) {
-            delay(5000) // wait 5 seconds of listening, then mock-process a statement
-            if (currentState == VoiceState.LISTENING) {
-                startStateCycle()
-            }
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.shutdown()
         }
     }
 
@@ -142,8 +164,10 @@ fun VoiceCompanionScreen(
                 durationMillis = when (currentState) {
                     VoiceState.IDLE -> 3000
                     VoiceState.LISTENING -> 1500
+                    VoiceState.TRANSCRIBING -> 400
                     VoiceState.THINKING -> 600
                     VoiceState.SPEAKING -> 1000
+                    VoiceState.ERROR -> 2000
                 },
                 easing = FastOutSlowInEasing
             ),
@@ -170,7 +194,7 @@ fun VoiceCompanionScreen(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF7F9FB)) // f7f9fb background
+            .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
@@ -195,7 +219,13 @@ fun VoiceCompanionScreen(
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     IconButton(
-                        onClick = onBackClick,
+                        onClick = {
+                            if (isSessionActive) {
+                                showExitDialog = true
+                            } else {
+                                onBackClick()
+                            }
+                        },
                         modifier = Modifier.size(40.dp)
                     ) {
                         Icon(
@@ -301,6 +331,49 @@ fun VoiceCompanionScreen(
                 }
             }
 
+            if (showPermissionDeniedCard) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFFFFDAD6),
+                    border = BorderStroke(1.dp, Color(0xFFBA1A1A).copy(alpha = 0.3f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Row(
+                        modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_mic_off),
+                            contentDescription = null,
+                            tint = Color(0xFFBA1A1A),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Microphone permission is required to speak with the Voice Companion. Please allow access to continue.",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    color = Color(0xFF410002),
+                                    fontSize = 13.sp
+                                )
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "TAP HERE TO RETRY",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = Color(0xFFBA1A1A),
+                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 12.sp
+                                ),
+                                modifier = Modifier.clickable {
+                                    recordAudioPermissionLauncher.launch(permission)
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+
             // Orb Animation Container
             Box(
                 modifier = Modifier
@@ -346,8 +419,15 @@ fun VoiceCompanionScreen(
                 Box(
                     modifier = Modifier
                         .size(280.dp)
-                        .clip(CircleShape)
-                        .clickable { startStateCycle() }
+                        .clickable {
+                            if (!hasPermission) {
+                                recordAudioPermissionLauncher.launch(permission)
+                            } else if (currentState == VoiceState.LISTENING) {
+                                viewModel.stopListening()
+                            } else {
+                                viewModel.startListening(context)
+                            }
+                        }
                         .border(2.dp, Color.White.copy(alpha = 0.6f), CircleShape)
                         .drawBehind {
                             val canvasSize = this.size
@@ -360,8 +440,10 @@ fun VoiceCompanionScreen(
                             val accentColor = when (currentState) {
                                 VoiceState.IDLE -> indigo.copy(alpha = 0.5f)
                                 VoiceState.LISTENING -> teal.copy(alpha = 0.7f)
+                                VoiceState.TRANSCRIBING -> Color(0xFFF59E0B).copy(alpha = 0.7f)
                                 VoiceState.THINKING -> teal
                                 VoiceState.SPEAKING -> indigo
+                                VoiceState.ERROR -> Color(0xFFBA1A1A)
                             }
 
                             drawRect(
@@ -422,8 +504,10 @@ fun VoiceCompanionScreen(
                             text = when (currentState) {
                                 VoiceState.IDLE -> "💤"
                                 VoiceState.LISTENING -> "🎙"
-                                VoiceState.THINKING -> "⚡"
+                                VoiceState.TRANSCRIBING -> "⚡"
+                                VoiceState.THINKING -> "🧠"
                                 VoiceState.SPEAKING -> "🔊"
+                                VoiceState.ERROR -> "⚠️"
                             },
                             fontSize = 32.sp
                         )
@@ -577,7 +661,13 @@ fun VoiceCompanionScreen(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.clickable { isMuted = !isMuted }
+                        modifier = Modifier.clickable {
+                            if (hasPermission) {
+                                viewModel.toggleMute(context)
+                            } else {
+                                recordAudioPermissionLauncher.launch(permission)
+                            }
+                        }
                     ) {
                         Box(
                             modifier = Modifier
@@ -623,10 +713,12 @@ fun VoiceCompanionScreen(
                             )
                             IconButton(
                                 onClick = {
-                                    if (currentState == VoiceState.IDLE) {
-                                        currentState = VoiceState.LISTENING
+                                    if (!hasPermission) {
+                                        recordAudioPermissionLauncher.launch(permission)
+                                    } else if (currentState == VoiceState.LISTENING) {
+                                        viewModel.stopListening()
                                     } else {
-                                        currentState = VoiceState.IDLE
+                                        viewModel.startListening(context)
                                     }
                                 },
                                 modifier = Modifier
@@ -656,7 +748,7 @@ fun VoiceCompanionScreen(
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(8.dp),
-                        modifier = Modifier.clickable { isSpeakerOn = !isSpeakerOn }
+                        modifier = Modifier.clickable { viewModel.toggleSpeaker() }
                     ) {
                         Box(
                             modifier = Modifier

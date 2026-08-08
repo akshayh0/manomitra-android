@@ -69,4 +69,21 @@ class FirestoreRepositoryImpl : FirestoreRepository {
             emit(Result.failure(e))
         }
     }
+
+    override fun updateUserProfileFlow(uid: String, name: String, profileImage: String): Flow<Result<Unit>> = flow {
+        try {
+            firestore.collection("users")
+                .document(uid)
+                .update(
+                    mapOf(
+                        "name" to name,
+                        "profileImage" to profileImage
+                    )
+                )
+                .await()
+            emit(Result.success(Unit))
+        } catch (e: Exception) {
+            emit(Result.failure(e))
+        }
+    }
 }

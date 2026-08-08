@@ -47,16 +47,24 @@ fun JournalScreen(
     onHomeTabClick: () -> Unit,
     onCompanionTabClick: () -> Unit,
     onProfileTabClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    viewModel: JournalViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
 ) {
     val spacing = MaterialTheme.spacing
+    val todayEntry by viewModel.todayEntry.collectAsState()
     var reflectionText by remember { mutableStateOf("") }
     val scrollState = rememberScrollState()
+
+    LaunchedEffect(todayEntry) {
+        todayEntry?.let {
+            reflectionText = it.text
+        }
+    }
 
     Box(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFFF7F9FB)) // f7f9fb base background
+            .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
@@ -140,6 +148,16 @@ fun JournalScreen(
             }
 
             // AI Insight Card (Detected Mood)
+            val emoji = when (todayEntry?.aiAnalysis?.get("detectedEmotion") as? String) {
+                "Joy", "Happy" -> "😊"
+                "Anxiety", "Stressed" -> "😰"
+                "Sadness", "Sad" -> "😢"
+                "Anger", "Angry" -> "😠"
+                "Calm", "Peaceful" -> "😌"
+                else -> "😊"
+            }
+            val moodText = todayEntry?.mood ?: "Calm"
+
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = Color.White,
@@ -156,7 +174,7 @@ fun JournalScreen(
                         horizontalArrangement = Arrangement.spacedBy(16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "😊", fontSize = 32.sp)
+                        Text(text = emoji, fontSize = 32.sp)
                         Column {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
@@ -169,7 +187,7 @@ fun JournalScreen(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
-                                    text = "Calm",
+                                    text = moodText,
                                     style = MaterialTheme.typography.titleMedium.copy(
                                         fontWeight = FontWeight.Bold,
                                         color = Color(0xFF191C1E)
@@ -303,6 +321,9 @@ fun JournalScreen(
             }
 
             // AI Insight Feedback Banner
+            val aiReflectionText = (todayEntry?.aiAnalysis?.get("supportiveReflection") as? String)
+                ?: "Write down your thoughts and save to get AI-powered insights from Manomitra."
+
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f),
@@ -333,7 +354,7 @@ fun JournalScreen(
                         )
                     }
                     Text(
-                        text = "\"You've had a peaceful day. Focusing on gratitude will help maintain this balance.\"",
+                        text = "\"$aiReflectionText\"",
                         style = MaterialTheme.typography.bodyLarge.copy(
                             color = Color(0xFF191C1E),
                             fontStyle = FontStyle.Italic
@@ -506,8 +527,14 @@ fun JournalScreen(
             }
 
             PrimaryGradientButton(
-                text = "Save Journal Entry",
-                onClick = onBackClick,
+                text = if (viewModel.isLoading) "Saving & Analyzing..." else "Save Journal Entry",
+                onClick = {
+                    if (!viewModel.isLoading) {
+                        viewModel.saveAndAnalyzeJournal(reflectionText) {
+                            onBackClick()
+                        }
+                    }
+                },
                 showArrow = false,
                 shape = CircleShape,
                 modifier = Modifier.fillMaxWidth()

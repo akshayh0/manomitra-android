@@ -43,6 +43,10 @@ import com.manomitra.app.R
 import com.manomitra.app.core.theme.spacing
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalContext
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -75,14 +79,56 @@ fun ChatScreen(
 ) {
     val spacing = MaterialTheme.spacing
     val listState = rememberLazyListState()
+    val context = LocalContext.current
+    val voiceInputText by viewModel.voiceInputText.collectAsState()
+
+    val currentUser = remember { com.google.firebase.auth.FirebaseAuth.getInstance().currentUser }
+    val displayName = remember { currentUser?.displayName ?: currentUser?.email?.substringBefore("@") ?: "User" }
+
+    val isSystemDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val isDarkMode = when (com.manomitra.app.core.settings.AppSettings.getAppTheme(context).lowercase()) {
+        "dark" -> true
+        "light" -> false
+        else -> isSystemDark
+    }
+
+    val recordAudioPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { isGranted ->
+            if (isGranted) {
+                if (viewModel.isListeningVoice) {
+                    viewModel.stopVoiceInput()
+                } else {
+                    viewModel.startVoiceInput(context)
+                }
+            } else {
+                viewModel.setVoiceError("Microphone permission denied.")
+            }
+        }
+    )
 
     var textInput by remember { mutableStateOf("") }
     val messages = viewModel.messages
     val isTyping = viewModel.isTyping
 
+    LaunchedEffect(voiceInputText) {
+        voiceInputText?.let { text ->
+            if (text.isNotEmpty()) {
+                textInput = text
+                viewModel.clearVoiceInputText()
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            viewModel.stopSpeaking()
+        }
+    }
+
     fun sendMessage(text: String) {
         if (text.trim().isEmpty()) return
-        viewModel.sendMessage(text)
+        viewModel.sendMessage(text, context)
         textInput = ""
     }
 
@@ -119,8 +165,8 @@ fun ChatScreen(
                 val offsetX2 = size.width * (0.5f + 0.2f * kotlin.math.sin(angleRad1 * 1.5f))
                 val offsetY2 = size.height * (0.5f + 0.2f * kotlin.math.cos(angleRad1 * 1.5f))
 
-                // Base surface fill (#F7F9FB)
-                drawRect(Color(0xFFF7F9FB))
+                // Base surface fill (support dark theme)
+                drawRect(if (isDarkMode) Color(0xFF191C1E) else Color(0xFFF7F9FB))
 
                 // Indigo radial glow
                 drawCircle(
@@ -256,7 +302,7 @@ fun ChatScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Hi Akshay 👋",
+                            text = "Hi $displayName 👋",
                             style = MaterialTheme.typography.headlineLarge.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary,
@@ -508,10 +554,27 @@ fun ChatScreen(
                 .align(Alignment.BottomCenter)
                 .padding(bottom = 152.dp)
         ) {
+            val buttonText = when {
+                viewModel.isSpeaking -> "Stop Speaking"
+                viewModel.isVoiceModeOn -> "Voice Mode On"
+                else -> "Talk Naturally"
+            }
+            val buttonColor = when {
+                viewModel.isSpeaking -> MaterialTheme.colorScheme.error
+                viewModel.isVoiceModeOn -> MaterialTheme.colorScheme.primary
+                else -> Color(0xFF777587)
+            }
+
             Button(
-                onClick = { sendMessage("Talk naturally activated.") },
+                onClick = {
+                    if (viewModel.isSpeaking) {
+                        viewModel.stopSpeaking()
+                    } else {
+                        viewModel.toggleVoiceMode(context)
+                    }
+                },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
+                    containerColor = buttonColor,
                     contentColor = Color.White
                 ),
                 shape = CircleShape,
@@ -537,7 +600,7 @@ fun ChatScreen(
                         )
                     }
                     Text(
-                        text = "Talk Naturally",
+                        text = buttonText,
                         fontWeight = FontWeight.Bold,
                         fontSize = 15.sp,
                         letterSpacing = 0.5.sp
@@ -770,13 +833,29 @@ fun ChatScreen(
                     }
 
                     IconButton(
-                        onClick = { sendMessage("Voice input recorded.") },
+                        onClick = {
+                            val permission = android.Manifest.permission.RECORD_AUDIO
+                            val isGranted = androidx.core.content.ContextCompat.checkSelfPermission(
+                                context,
+                                permission
+                            ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+                            if (isGranted) {
+                                if (viewModel.isListeningVoice) {
+                                    viewModel.stopVoiceInput()
+                                } else {
+                                    viewModel.startVoiceInput(context)
+                                }
+                            } else {
+                                recordAudioPermissionLauncher.launch(permission)
+                            }
+                        },
                         modifier = Modifier.size(28.dp)
                     ) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_mic),
                             contentDescription = "Voice Input",
-                            tint = Color(0xFF777587),
+                            tint = if (viewModel.isListeningVoice) MaterialTheme.colorScheme.primary else Color(0xFF777587),
                             modifier = Modifier.size(20.dp)
                         )
                     }

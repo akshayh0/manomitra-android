@@ -11,4 +11,5 @@ interface FirestoreRepository {
     fun saveUserProfileFlow(user: User): Flow<Result<Unit>>
     fun getUserProfileFlow(uid: String): Flow<Result<User?>>
     fun updateLastLoginFlow(uid: String): Flow<Result<Unit>>
+    fun updateUserProfileFlow(uid: String, name: String, profileImage: String): Flow<Result<Unit>>
 }

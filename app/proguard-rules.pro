@@ -1,21 +1,24 @@
 # Add project specific ProGuard rules here.
 # You can control the set of applied configuration files using the
 # proguardFiles setting in build.gradle.
-#
-# For more details, see
-#   http://developer.android.com/guide/developing/tools/proguard.html
 
-# If your project uses WebView with JS, uncomment the following
-# and specify the fully qualified class name to the JavaScript interface
-# class:
-#-keepclassmembers class fqcn.of.javascript.interface.for.webview {
-#   public *;
-#}
+# Firebase keep rules
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
 
-# Uncomment this to preserve the line number information for
-# debugging stack traces.
-#-keepattributes SourceFile,LineNumberTable
+# Google GenAI keep rules
+-keep class com.google.genai.** { *; }
+-dontwarn com.google.genai.**
 
-# If you keep the line number information, uncomment this to
-# hide the original source file name.
-#-renamesourcefileattribute SourceFile
+# JSONObject/JSON keep rules for Groq serialization
+-keep class org.json.** { *; }
+
+# Prevent renaming of model serialization classes mapped by Firestore
+-keepclassmembers class * {
+    @com.google.firebase.firestore.PropertyName <fields>;
+    @com.google.firebase.firestore.PropertyName <methods>;
+}
+
+# General Keep Attributes for reflection & generics
+-keepattributes Signature, *Annotation*, InnerClasses, EnclosingMethod
+-keepattributes SourceFile, LineNumberTable
