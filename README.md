@@ -7,6 +7,40 @@ Manomitra is an Android application designed as a personal AI companion that bri
 The app is built with **Kotlin and Jetpack Compose**, uses **Firebase Authentication and Firestore** for user data, and integrates **Google Gemini and Groq** for AI-powered conversations and voice features.
 
 ---
+## 📱 Download Manomitra
+
+### Current Version — v1.0.0
+
+[![Download APK](https://img.shields.io/badge/Download-Manomitra%20v1.0.0-green?style=for-the-badge&logo=android)](https://github.com/akshayh0/manomitra-android/releases/tag/v1.0.0)
+
+Download and install the latest available Android version from GitHub Releases.
+
+**Version:** `v1.0.0`  
+**Platform:** Android  
+**APK:** `app-debug.apk`
+
+---
+
+### 🚀 Upcoming — v2.0.0
+
+**Manomitra v2.0.0 — Coming Soon 🚀**
+
+The next major version of Manomitra is currently under development.
+
+Planned improvements include:
+
+- 🤖 Enhanced AI conversations
+- 🎙️ Improved voice interaction
+- 🧠 Better AI-powered insights
+- 😊 Enhanced mood tracking
+- 📔 Improved journaling experience
+- 🌐 Additional language support
+- 🎨 UI/UX improvements
+- ⚡ Performance improvements
+- 🔒 Security and stability improvements
+
+> **v2.0.0 is currently under development and will be released in a future update.**
+
 
 ## ✨ Features
 
